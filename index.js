@@ -11,56 +11,30 @@ const winnerLines = [
 ];
 
 //vars
-let currValue = "X";
+let nextValue = "X";
+
 const winnerEle = document.getElementById("winner").firstElementChild;
-winnerEle.textContent = `Next player is: ${currValue}`;
+winnerEle.textContent = `Next player is: ${nextValue}`;
 const containerEle = document.getElementById("container");
-const squaresEle = containerEle.querySelectorAll(".square");
-let isSquareFilledArr = Array.from({ length: 9 });
-const elementsFuncRefs = Array.from({ length: 9 });
-const historyArray = [isSquareFilledArr];
 
-const historyButtons = document
-  .getElementById("history")
-  .querySelectorAll("button");
+let currFilledValues = Array.from({ length: 9 });
 
-historyButtons[0].addEventListener("click", () => {
-  currValue = "X";
-  winnerEle.textContent = `Next player is: ${currValue}`;
-  historyArray[0].forEach((value, idx) => {
-    const h1Ele = squaresEle[idx].firstElementChild;
+let currentHistoryClicked = null;
 
-    if (value) {
-      const { onMouseOut, onMouseOver, onSquareClick } = elementsFuncRefs[idx];
-      squaresEle[idx].removeEventListener("mouseover", onMouseOver);
-      squaresEle[idx].removeEventListener("mouseout", onMouseOut);
-      squaresEle[idx].removeEventListener("click", onSquareClick);
+const allSquareEle = containerEle.querySelectorAll(".square");
+const allSquareEleListenerRefs = Array.from({ length: 9 });
+const historyArray = [[...currFilledValues]];
 
-      h1Ele.innerText = value;
-      h1Ele.className = "";
-      return;
-    }
-
-    const onMouseOver = () => {
-      h1Ele.innerText = currValue;
-      h1Ele.className = "hover";
-    };
-
-    const onMouseOut = () => {
-      h1Ele.innerText = "";
-      h1Ele.className = "";
-    };
-  });
-});
+const historyListEle = document.getElementById("history");
 
 //functions
 const setNextValue = () => {
-  if (currValue === "X") {
-    currValue = "O";
+  if (nextValue === "X") {
+    nextValue = "O";
   } else {
-    currValue = "X";
+    nextValue = "X";
   }
-  winnerEle.textContent = `Next player is: ${currValue}`;
+  winnerEle.textContent = `Next player is: ${nextValue}`;
 };
 
 const isWinnerAnnounced = () => {
@@ -68,11 +42,11 @@ const isWinnerAnnounced = () => {
   winnerLines.some((line) => {
     const [i, j, k] = line;
 
-    if (!isSquareFilledArr[i]) return false;
+    if (!currFilledValues[i]) return false;
 
     if (
-      isSquareFilledArr[i] === isSquareFilledArr[j] &&
-      isSquareFilledArr[i] === isSquareFilledArr[k]
+      currFilledValues[i] === currFilledValues[j] &&
+      currFilledValues[i] === currFilledValues[k]
     ) {
       isWinner = true;
       return true;
@@ -81,56 +55,133 @@ const isWinnerAnnounced = () => {
 
   if (isWinner) {
     containerEle.className = containerEle.className + " disabled";
-    winnerEle.textContent = `👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑\n👑  Buyaaah! Winner is "${currValue}" !  👑\n👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑`;
+    winnerEle.textContent = `👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑\n👑  Buyaaah! Winner is "${nextValue}" !  👑\n👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑 👑`;
 
-    squaresEle.forEach((squareEle, idx) => {
-      const { onMouseOut, onMouseOver, onSquareClick } = elementsFuncRefs[idx];
-
-      squareEle.removeEventListener("mouseover", onMouseOver);
-      squareEle.removeEventListener("mouseout", onMouseOut);
-      squareEle.removeEventListener("click", onSquareClick);
-    });
+    // this below is just cleanup of event listeners
+    allSquareEle.forEach(squareBoxListenerRemover);
   }
 
   return isWinner;
 };
 
-const addListenersToSquares = () =>
-  squaresEle.forEach((squareEle, idx) => {
-    const h1Ele = squareEle.firstElementChild;
+const squareBoxListenerRemover = (squareEle, idx) => {
+  const { onMouseOut, onMouseOver, onSquareClick } =
+    allSquareEleListenerRefs[idx];
 
-    const onMouseOver = () => {
-      h1Ele.innerText = currValue;
-      h1Ele.className = "hover";
-    };
+  squareEle.removeEventListener("mouseover", onMouseOver);
+  squareEle.removeEventListener("mouseout", onMouseOut);
+  squareEle.removeEventListener("click", onSquareClick);
+};
 
-    const onMouseOut = () => {
-      h1Ele.innerText = "";
-      h1Ele.className = "";
-    };
+const getNewButton = (currHistoryArray, filledValue) => {
+  const liEle = document.createElement("li");
+  const button = document.createElement("button");
+  const move = currHistoryArray.length - 1;
+  button.innerText = `Go to move #${move}`;
 
-    const onSquareClick = () => {
-      if (isSquareFilledArr[idx]) return;
+  const onHistoryBtnClick = getHistoryClickHandler(
+    currHistoryArray,
+    filledValue
+  );
 
-      h1Ele.innerText = currValue;
-      h1Ele.className = "";
+  button.addEventListener("click", onHistoryBtnClick);
 
-      isSquareFilledArr[idx] = currValue;
+  liEle.appendChild(button);
+  return liEle;
+};
 
-      squareEle.removeEventListener("mouseover", onMouseOver);
-      squareEle.removeEventListener("mouseout", onMouseOut);
+const addListenersToSquares = (squareEle, idx) => {
+  const h1Ele = squareEle.firstElementChild;
 
-      const isWinner = isWinnerAnnounced();
-      !isWinner && setNextValue();
-    };
+  const onMouseOver = () => {
+    h1Ele.innerText = nextValue;
+    h1Ele.className = "hover";
+  };
 
-    squareEle.addEventListener("mouseover", onMouseOver);
-    squareEle.addEventListener("mouseout", onMouseOut);
-    squareEle.addEventListener("click", onSquareClick);
+  const onMouseOut = () => {
+    h1Ele.innerText = "";
+    h1Ele.className = "";
+  };
 
-    elementsFuncRefs[idx] = {
-      onMouseOut,
-      onMouseOver,
-      onSquareClick,
-    };
-  });
+  const onSquareClick = () => {
+    if (currFilledValues[idx]) return;
+
+    h1Ele.innerText = nextValue;
+    h1Ele.className = "";
+    currFilledValues[idx] = nextValue;
+
+    // if history clicked, remove all history buttons after this clicked history button
+    if (currentHistoryClicked !== null) {
+      const removeExtra = historyArray.length - currentHistoryClicked;
+      for (let i = 0; i < removeExtra; i++) {
+        historyListEle.removeChild(historyListEle.lastElementChild);
+        historyArray.pop();
+      }
+      currentHistoryClicked = null;
+    }
+
+    squareEle.removeEventListener("mouseover", onMouseOver);
+    squareEle.removeEventListener("mouseout", onMouseOut);
+
+    const isWinner = isWinnerAnnounced();
+    if (isWinner) return;
+
+    // hitoryy Array and next value
+    setNextValue();
+    historyArray.push([...currFilledValues]);
+    const filledValue = nextValue;
+    historyListEle.appendChild(getNewButton([...historyArray], filledValue));
+  };
+
+  squareEle.addEventListener("mouseover", onMouseOver);
+  squareEle.addEventListener("mouseout", onMouseOut);
+  squareEle.addEventListener("click", onSquareClick);
+
+  allSquareEleListenerRefs[idx] = {
+    onMouseOut,
+    onMouseOver,
+    onSquareClick,
+  };
+};
+
+const getHistoryClickHandler = (currHistoryArray, filledValue) => {
+  return () => {
+    const currHistoryCount = currHistoryArray.length;
+    currentHistoryClicked = currHistoryCount; // preserving so that we can remove extra history buttons later
+
+    containerEle.className = containerEle.className.replace("disabled", "");
+
+    nextValue = filledValue;
+    winnerEle.textContent = `Next player is: ${nextValue}`;
+
+    currHistoryArray[currHistoryCount - 1].forEach((value, idx) => {
+      const h1Ele = allSquareEle[idx].firstElementChild;
+
+      // remove listeners
+      squareBoxListenerRemover(allSquareEle[idx], idx);
+
+      if (value) {
+        h1Ele.innerText = value;
+        h1Ele.className = "";
+        currFilledValues[idx] = value;
+      } else {
+        h1Ele.innerText = "";
+        h1Ele.className = "";
+        currFilledValues[idx] = "";
+
+        addListenersToSquares(allSquareEle[idx], idx);
+      }
+    });
+  };
+};
+
+const addOnClickHandlerToStartBtn = () => {
+  const gameStartBtn = historyListEle.querySelectorAll("button")[0];
+  const onHistoryClick = getHistoryClickHandler([...historyArray], "X");
+
+  gameStartBtn.addEventListener("click", onHistoryClick);
+};
+
+// on start
+allSquareEle.forEach(addListenersToSquares);
+addOnClickHandlerToStartBtn();
